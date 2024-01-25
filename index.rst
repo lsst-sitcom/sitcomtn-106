@@ -9,7 +9,7 @@ Time Synchronization for the CBP Calibration System
 Introduction
 ============
 
-The Collimated Beam Projector (CBP) will be used to measure the wavelength-dependent throughput of the Simonyi telescope. The CBP, mounted on the dome, will project collimated bursts of monochromatic light into the telescope. If we know the intensity of the bursts then we can calculate the telescope throughput.  To measure the burst intensity, we calibrate a photodiode on the integrating sphere at the input to the CBP relative to an external detector, thus measuring the CBP transmission. The external detector is known as the CBP Calibration System. To calibrate the CBP at the milli-mag level, as is our goal, it is critical that we know the time that laser bursts are sent relative to when measurements are taken with the detector/photodiode to a very high accuracy. This tech note discusses the method, hardware, and software **proposed** to do this.
+The Collimated Beam Projector (CBP) will be used to measure the wavelength-dependent throughput of the Simonyi telescope. The CBP, mounted on the dome, will project collimated bursts of monochromatic light into the telescope. If we know the intensity of the bursts then we can calculate the telescope throughput.  To measure the burst intensity, we calibrate a photodiode on the integrating sphere at the input to the CBP relative to an external detector, thus measuring the CBP transmission. The external detector is known as the CBP Calibration System. To calibrate the CBP at the milli-mag level, as is our goal, it is critical that we know the time that laser bursts are sent relative to when measurements are taken with the detector/photodiode to a very high accuracy. This tech note discusses the method, hardware, and software **proposed** to accomplish this.
 
 Details of the time synchronization problem
 ===========================================
@@ -24,17 +24,17 @@ Data Acquisition and Synchronization
 
 At each wavelength we output a series of laser bursts and both electrometers read out time traces of the charge accumulated from the photodiode over these bursts. From this data, we can subtract off the background charge accumulation and determine the total amount of charge accumulated due to the laser bursts. At wavelengths where there is a large signal, we can directly fit the data traces, but for laser wavelengths with smaller signals, determining the start and end of each burst through fitting these data traces alone is challenging. We solve this problem by syncing the measurement times to the laser burst times. The electrometers output a TTL signal at the start and end of each data trace, and the laser outputs a TTL signal for every laser pulse. At LPNHE, the team uses a `logic timer <https://github.com/betoule/logic_timer/blob/main/README.md>`_, created by Marc Betoule, to sync up the start and end of the electrometer traces along with the laser bursts by connecting the TTL signals via BNC to the logic timer.
 
-.. image:: images/logic_timer_output.png
+.. figure:: images/logic_timer_output.png 
    :width: 400
   
-From top, (a) Data trace of the charge from the Rubin CBP photodiode at 450 nm, measured by the Keysight electrometer. (b) Keysight electrometer charge readout trace for the calibration photodiode at 450 nm. (c) Pin states read out by the logic timer. Pin 1 is the laser TTL signal and the pin detects pulses in a burst. Pins 2 and 4 are for the CBP and CBP calibration photodiode electrometers, respectively. (d) Spectrograph signal.
+   From top, (a) Data trace of the charge from the Rubin CBP photodiode at 450 nm, measured by the Keysight electrometer. (b) Keysight electrometer charge readout trace for the calibration photodiode at 450 nm. (c) Pin states read out by the logic timer. Pin 1 is the laser TTL signal and the pin detects pulses in a burst. Pins 2 and 4 are for the CBP and CBP calibration photodiode electrometers, respectively. (d) Spectrograph signal.
 
 Some wavelengths have a strong enough signal that the logic timer is not needed to find the start and end of each burst. However, some of the wavelengths have a weak enough signal that the fit fails without the logic timer. Jérémy Neveu provides the following analysis of the data at LPNHE with and without the logic timer (here the CBP calibration hardware used a solar cell, not a photodiode): 
 
-.. image:: images/no_logic_timer.png
+.. figure:: images/no_logic_timer.png
    :width: 700
   
-Left image: The ratio of the solar cell charge to the photodiode charge with fits done with and without the logic timer (or digital analyzer as it is sometimes called). Right image: percent uncertainties in the fits with and without the logic timer. 
+   Left image: The ratio of the solar cell charge to the photodiode charge with fits done with and without the logic timer (or digital analyzer as it is sometimes called). Right image: percent uncertainties in the fits with and without the logic timer. 
 
 In the range of ~700 to 1000 nm, the fits work well without a logic timer. However, outside of that wavelength range, the fits fail. Thus, the logic timer is necessary.
 
@@ -59,10 +59,32 @@ Operation
 Hardware
 --------
 
-The Raspberry Pis will be located in the electronics cabinets near the laser and the CBP calibration system. They will read out TTL signals from the laser and the electrometer, respectively. 
+The logic timer will be implemented using Raspberry Pis (4b) with the adafruit ultimate GPS hat. Additionally, all RPis will have a 73LVC245 level-shifter chip and an input connector on the adafruit hat to accomodate the TTL input. The RPis will be located in the electronics cabinets near the laser and the CBP calibration system. They will read out TTL signals from the laser and the electrometer, respectively. 
+
+At this time it is planned to add a RPi for the laser and the CBP Calibration System. We may want to add one to the CBP in the future.
+
+.. figure:: images/logictimer_fbd.png
+   :width: 700
+
+   In this functional diagram, light travels from the laser to an integrating sphere via optical fiber. The light is then sent in a collimated beam from the CBP to the CBP Calibration System. The charge in the photodiodes at the CBP and CBP Calibration system are read out with Electrometers (black lines). When a pulse is sent by the laser, it sends a TTL signal to the RPi. Similarly, when an exposure is taken with an Electrometer, a TTL signal is sent to the RPi (blue lines)
+
+.. note:: Previously, we were using the Keithley electrometer to measure the photodiode charge. The Keithley does not output a TTL signal with measurements. We are now using the Keysight electrometer for several reasons, one being that it does have a TTL signal output.
 
 Software
 --------
+For the following discussion, the term **measurement** refers to a series of bursts at a single wavelength sent from the CBP (via laser) to the CBP Calibration System. Each time a measurement is made, we want to record the signals from the laser and the the electrometer(s) in a way that can later be identified with the measurement. A python progrm running on the Raspberry Pis needs to be run for each of these measurements. We need a way to run that program asynchronysly with a measurement. For reference, the laser and electrometer measurements will be run with a asynch gather.
+
+.. code-block:: python
+
+   await asyncio.gather(laser.cmd_triggerBurst.start(),
+                        electrometer.cmd_startScanDt.set_start(scanDuration=1))
+
+For the laser, a TTL signal is sent for every pulse. The number of pulses depend on the size of the burst, but they will always come at 1kHz. This is too much data to be saved directly to the EFD, so it would be best to save the output from the laser in a file on the lfa, with the filename recorded to the EFD.
+
+For the electrometers, a TTL signal is sent at the start and end of an exposure. Since this is low enough latency that the timestamps recorded by the RaspberryPi can be logged as messages in the Electrometer EFD when they occur. 
+
+The analysis software used to combine the timing data with the electrometer data was written by the STARDice group at LPNHE. This will need to be modified for the exact data products supplied, but the main structure already exists. This software will be saved at <https://github.com/lsst-ts/cbp_analysis>.
+
 
 Tests and items we still need to do
 ===================================
