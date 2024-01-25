@@ -63,6 +63,13 @@ The Raspberry Pis will be located in the electronics cabinets near the laser and
 
 Software
 --------
+- Functional software to record the TTL signals
+
+- Trigger the measurement and save a file
+- Add that file to the lfa for the laser and just a timestamp in the EFD for the electrometers
+
+- Analysis software
+
 
 Tests and items we still need to do
 ===================================
