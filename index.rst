@@ -61,6 +61,9 @@ Hardware
 
 The logic timer will be implemented using Raspberry Pis (4b) with the adafruit ultimate GPS hat. Additionally, all RPis will have a 73LVC245 level-shifter chip and an input connector on the adafruit hat to accomodate the TTL input. The RPis will be located in the electronics cabinets near the laser and the CBP calibration system. They will read out TTL signals from the laser and the electrometer, respectively. 
 
+.. figure:: images/logictimer_trigger_input.png
+   :width: 700
+
 At this time it is planned to add a RPi for the laser and the CBP Calibration System. We may want to add one to the CBP in the future.
 
 .. figure:: images/logictimer_fbd.png
