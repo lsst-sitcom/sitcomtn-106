@@ -72,7 +72,7 @@ At this time it is planned to add a RPi for the laser and the CBP Calibration Sy
 
 Software
 --------
-For the following discussion, the term **measurement** refers to a series of bursts at a single wavelength sent from the CBP (via laser) to the CBP Calibration System. Each time a measurement is made, we want to record the signals from the laser and the the electrometer(s) in a way that can later be identified with the measurement. A python progrm running on the Raspberry Pis needs to be run for each of these measurements. We need a way to run that program asynchronysly with a measurement. For reference, the laser and electrometer measurements will be run with a asynch gather.
+For the following discussion, the term **measurement** refers to a series of bursts at a single wavelength sent from the CBP (via laser) to the CBP Calibration System. Each time a measurement is made, we want to record the signals from the laser and the the electrometer(s) in a way that can later be identified with the measurement. A python program running on the Raspberry Pis needs to be run for each of these measurements. We need a way to run that program asynchronysly with a measurement. For reference, the laser and electrometer measurements will be run with a asynch gather.
 
 .. code-block:: python
 
